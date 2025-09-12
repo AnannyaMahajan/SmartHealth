@@ -1,37 +1,35 @@
-# backend/app/models.py
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean, Text, ForeignKey
-from sqlalchemy.sql import func
-from .database import Base
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String
+from pydantic import BaseModel
+from app.database import Base
 
+# ---------------- SQLAlchemy ORM ----------------
 class Patient(Base):
     __tablename__ = "patients"
     id = Column(Integer, primary_key=True, index=True)
-    external_id = Column(String, unique=True, index=True)  # e.g., FHIR patient id or guid
-    name = Column(String)
+    external_id = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
+    age = Column(Integer)
     gender = Column(String)
-    birthDate = Column(String)
-    raw_resource = Column(JSON)  # store FHIR resource JSON
+    contact = Column(String)
 
-    consents = relationship("Consent", back_populates="patient")
+# ---------------- Pydantic Schemas ----------------
+class PatientBase(BaseModel):
+    external_id: str
+    name: str
+    age: int
+    gender: str
+    contact: str
 
-class Consent(Base):
-    __tablename__ = "consents"
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True)
-    requester = Column(String, nullable=True)  # who requested consent
-    granted = Column(Boolean, default=False)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    audio_trail_path = Column(String, nullable=True)  # path to uploaded audio (optional)
-    raw_data = Column(JSON, nullable=True)
+class PatientCreate(PatientBase):
+    pass
 
-    patient = relationship("Patient", back_populates="consents")
+class PatientUpdate(BaseModel):
+    name: str | None = None
+    age: int | None = None
+    gender: str | None = None
+    contact: str | None = None
 
-class Alert(Base):
-    __tablename__ = "alerts"
-    id = Column(Integer, primary_key=True, index=True)
-    region = Column(String, index=True)
-    message = Column(String)
-    severity = Column(String, default="medium")
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    metadata = Column(JSON, nullable=True)
+class PatientOut(PatientBase):
+    id: int
+    class Config:
+        orm_mode = True
