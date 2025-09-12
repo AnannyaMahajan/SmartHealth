@@ -1,41 +1,36 @@
-# backend/app/crud.py
 from sqlalchemy.orm import Session
-from . import models, schemas
-from typing import Optional
+from app import models
 
-def get_patient_by_external_id(db: Session, external_id: str) -> Optional[models.Patient]:
+def get_patient_by_external_id(db: Session, external_id: str):
     return db.query(models.Patient).filter(models.Patient.external_id == external_id).first()
 
-def create_or_update_patient(db: Session, resource_json: dict):
-    ext_id = resource_json.get("id") or resource_json.get("identifier", [{}])[0].get("value")
-    patient = get_patient_by_external_id(db, ext_id) if ext_id else None
-    if not patient:
-        patient = models.Patient(
-            external_id=ext_id or f"p-{os.urandom(6).hex()}",
-            name=" ".join([n.get("family","") + " " + " ".join(n.get("given",[])) if isinstance(n,dict) else str(n) for n in resource_json.get("name", [])]) if resource_json.get("name") else None,
-            gender=resource_json.get("gender"),
-            birthDate=resource_json.get("birthDate"),
-            raw_resource=resource_json
-        )
-        db.add(patient)
-    else:
-        patient.raw_resource = resource_json
-        patient.gender = resource_json.get("gender")
-        patient.birthDate = resource_json.get("birthDate")
+def get_patients(db: Session, skip: int = 0, limit: int = 20):
+    return db.query(models.Patient).offset(skip).limit(limit).all()
+
+def create_patient(db: Session, patient: models.PatientCreate):
+    db_patient = models.Patient(
+        external_id=patient.external_id,
+        name=patient.name,
+        age=patient.age,
+        gender=patient.gender,
+        contact=patient.contact
+    )
+    db.add(db_patient)
+    db.commit()
+    db.refresh(db_patient)
+    return db_patient
+
+def update_patient(db: Session, patient: models.Patient, update_data: models.PatientUpdate):
+    for field, value in update_data.dict(exclude_unset=True).items():
+        setattr(patient, field, value)
     db.commit()
     db.refresh(patient)
     return patient
 
-def log_consent(db: Session, patient: Optional[models.Patient], requester: str, granted: bool, raw_data: dict=None, audio_path: str=None):
-    c = models.Consent(patient_id=patient.id if patient else None, requester=requester, granted=granted, raw_data=raw_data, audio_trail_path=audio_path)
-    db.add(c)
+def delete_patient(db: Session, external_id: str):
+    patient = get_patient_by_external_id(db, external_id)
+    if not patient:
+        return False
+    db.delete(patient)
     db.commit()
-    db.refresh(c)
-    return c
-
-def create_alert(db: Session, region: str, message: str, severity="medium", metadata: dict=None):
-    a = models.Alert(region=region, message=message, severity=severity, metadata=metadata)
-    db.add(a)
-    db.commit()
-    db.refresh(a)
-    return a
+    return True
