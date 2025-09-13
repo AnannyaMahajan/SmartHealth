@@ -23,10 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(fhir.router)
+app.include_router(patients.router)
 app.include_router(consent.router)
 app.include_router(alerts.router)
-app.include_router(signaling.router)
+app.include_router(ai_assistant.router)
+app.include_router(ws_ai.router)
+app.include_router(fhir.router)         
+app.include_router(signaling.router)  
 
 @app.get("/")
 def root():
