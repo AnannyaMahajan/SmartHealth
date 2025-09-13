@@ -1,12 +1,18 @@
 const API_BASE = "http://localhost:8000";
 
-// ✅ Check backend health
+// ✅ Health check
 export async function checkHealth() {
   const res = await fetch(`${API_BASE}/`);
   return res.json();
 }
 
-// ✅ Example: give patient consent
+// ✅ Patients list
+export async function getPatients() {
+  const res = await fetch(`${API_BASE}/patients`);
+  return res.json();
+}
+
+// ✅ Consent form submit
 export async function giveConsent(patientId, consent) {
   const res = await fetch(`${API_BASE}/consent`, {
     method: "POST",
