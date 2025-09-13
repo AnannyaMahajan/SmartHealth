@@ -6,6 +6,8 @@ import ConsentForm from "./components/ConsentForm";
 import VideoCall from "./components/VideoCall";
 import Footer from "./components/Footer";
 import { checkHealth, getPatients } from "./api";
+import AIDoctor from "./components/AIDoctor";
+
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -41,6 +43,7 @@ function App() {
       <ConsentForm />
       <VideoCall />
       <Footer />
+      <AIDoctor />
     </div>
   );
 }
