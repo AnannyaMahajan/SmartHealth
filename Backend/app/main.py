@@ -2,6 +2,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import fhir, consent, signaling, alerts
+from app.routes import patients        
+from app.routes import ai_assistant    
+from app.routes import ws_ai             
 from app.database import init_db
 
 app = FastAPI(title="HealthNE Pro Backend", version="0.1")
