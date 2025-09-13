@@ -1,38 +1,83 @@
-# backend/app/routes/consent.py
-from fastapi import APIRouter, Depends, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app import crud, models
-import shutil, os
+import React, { useState } from "react";
 
-router = APIRouter(prefix="/consent", tags=["consent"])
+function ConsentForm() {
+  const [patientId, setPatientId] = useState("");
+  const [requester, setRequester] = useState("");
+  const [granted, setGranted] = useState(false);
+  const [audioFile, setAudioFile] = useState(null);
+  const [message, setMessage] = useState("");
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-@router.post("/", summary="Record consent, optionally with audio trail")
-async def give_consent(
-    patient_external_id: str = Form(None),
-    requester: str = Form(...),
-    granted: bool = Form(...),
-    audio: UploadFile = File(None),
-    db: Session = Depends(get_db),
-):
-    # Find patient
-    patient = None
-    if patient_external_id:
-        patient = db.query(models.Patient).filter(models.Patient.external_id == patient_external_id).first()
+    // Create FormData to match FastAPI backend
+    const formData = new FormData();
+    formData.append("patient_external_id", patientId);
+    formData.append("requester", requester);
+    formData.append("granted", granted);
+    if (audioFile) {
+      formData.append("audio", audioFile); // optional
+    }
 
-    audio_path = None
-    if audio:
-        os.makedirs("uploads", exist_ok=True)
-        audio_path = f"uploads/{patient_external_id or 'anon'}_{audio.filename}"
-        with open(audio_path, "wb") as f:
-            shutil.copyfileobj(audio.file, f)
+    try {
+      const res = await fetch("http://localhost:8000/consent/", {
+        method: "POST",
+        body: formData, // must be FormData
+      });
+      const data = await res.json();
+      setMessage(`✅ Consent recorded: ${JSON.stringify(data)}`);
+    } catch (err) {
+      setMessage("⚠️ Could not connect to backend");
+      console.error(err);
+    }
+  };
 
-    consent = crud.log_consent(db=db, patient=patient, requester=requester, granted=granted, raw_data=None, audio_path=audio_path)
-    return {"status": "consent recorded", "consent_id": consent.id, "audio": audio_path}
+  return (
+    <div className="p-6 bg-white rounded-xl shadow-md max-w-md mx-auto my-8">
+      <h2 className="text-xl font-semibold mb-4">Consent Form</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Patient External ID"
+          value={patientId}
+          onChange={(e) => setPatientId(e.target.value)}
+          className="w-full border p-2 rounded"
+        />
+        <input
+          type="text"
+          placeholder="Requester Name"
+          value={requester}
+          onChange={(e) => setRequester(e.target.value)}
+          className="w-full border p-2 rounded"
+        />
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={granted}
+            onChange={(e) => setGranted(e.target.checked)}
+            className="mr-2"
+          />
+          I give my consent
+        </label>
+        <label className="flex flex-col">
+          Audio (optional):
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(e) => setAudioFile(e.target.files[0])}
+            className="mt-1"
+          />
+        </label>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Submit
+        </button>
+      </form>
+      {message && <p className="mt-4">{message}</p>}
+    </div>
+  );
+}
+
+export default ConsentForm;
